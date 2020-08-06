@@ -2,26 +2,28 @@
 
 . $PSScriptRoot\..\..\scripts\all.ps1
 
-$releases = 'https://github.com/Azure/azure-powershell/releases'
+$releases = 'https://github.com/Azure/azure-powershell/releases?after=AzureRM.Netcore.0.13.2-December2018'
 
 function global:au_SearchReplace {
     @{
         '.\azurepowershell.nuspec' = @{
-            '(^[\d\.]+\d)(\:)'                   = "$($Latest.Version)`$2"
-            '(software\s+version\s+)([\d\.]+\d)' = "`${1}$($Latest.SoftwareVersion)"
+            '(^[\d\.]+\d)(\:)'                                  = "$($Latest.Version)`$2"
+            '(software\s+version\s+)([\d\.]+\d)'                = "`${1}$($Latest.SoftwareVersion)"
         }
         '.\tools\ChocolateyInstall.ps1' = @{
-            '(^\s*\$moduleVersion\s*=\s*\[version\])(''.*'')' = "`$1'$($Latest.SoftwareVersion)'"
-            '(^\s*\$url\s*=\s*)(''.*'')'                    = "`$1'$($Latest.Url32)'"
-            '(^\s*\$checksum\s*=\s*)(''.*'')'               = "`$1'$($Latest.Checksum32)'"
-            '(^\s*\$checksumType\s*=\s*)(''.*'')'           = "`$1'$($Latest.ChecksumType32)'"
+            '(^\s*\$moduleVersion\s*=\s*\[version\])(''.*'')'   = "`$1'$($Latest.SoftwareVersion)'"
+            '(^\s*\$url\s*=\s*)(''.*'')'                        = "`$1'$($Latest.Url32)'"
+            '(^\s*\$checksum\s*=\s*)(''.*'')'                   = "`$1'$($Latest.Checksum32)'"
+            '(^\s*\$checksumType\s*=\s*)(''.*'')'               = "`$1'$($Latest.ChecksumType32)'"
+
+            '(^\s*url64\s*=\s*)(''.*'')'                        = "`$1'$($Latest.Url64)'"
+            "(?i)(^\s*checksum64\s*=\s*)('.*')"                 = "`$1'$($Latest.Checksum64)'"
+            "(?i)(^\s*checksumType64\s*=\s*)('.*')"             = "`$1'$($Latest.ChecksumType64)'"
         }
     }
 }
 
 function global:au_BeforeUpdate() {
-    $Latest.Checksum32 = Get-RemoteChecksum $Latest.Url32
-    $Latest.ChecksumType32 = 'SHA256'
 }
 
 function global:au_AfterUpdate { 
@@ -29,24 +31,18 @@ function global:au_AfterUpdate {
 }
 
 function global:au_GetLatest {
-    $downloadPage = Invoke-WebRequest -Uri $releases -UseBasicParsing
-
-    # Pre 6.10.0 download pattern
-    # https://github.com/Azure/azure-powershell/releases/download/v5.3.0-February2018-rtm/azure-powershell.5.3.0.msi
-    # $rx = '^' + [regex]::Escape($releases) + '/download/[^/]+/azure-powershell\.(?<v>\d+\.\d+\.\d+)\.msi$'
-
-    # Post 6.9.0 download pattern (renamed 'Azure-Cmdlets'; added 4th-octet to version number and explicit architecture)
-    # https://github.com/Azure/azure-powershell/releases/download/v6.13.1-November2018/Azure-Cmdlets-6.13.1.24243-x64.msi
-    $rx = '^' + [regex]::Escape($releases) + '/download/[^/]+/azure-cmdlets\-(?<v>\d+\.\d+\.\d+\.\d+)-x64+\.msi$'
-
-
-    $info = $downloadPage.Links | Select-Object -ExpandProperty href | Select-String -Pattern $rx | Select-Object -Property 'Line', @{ Name = 'Version'; Expression = { [version]$_.Matches[0].Groups['v'].Value } } | Sort-Object -Property 'Version' -Descending | Select-Object -First 1
-
+    $page = Invoke-WebRequest -Uri $releases -UseBasicParsing
+    $regexUrl = '/download/[^/]+/azure-cmdlets\-(?<version>6\.\d+\.\d+)\.(?<revision>\d+)-'
+    $urls = $page.links | Where-Object href -match $regexUrl | Select-Object -First 2 -expand href
+    $version = $matches.version
+    $rev = $matches.revision
+    $baseUrl = "https://github.com"
     return @{
-        SoftwareVersion = $info.Version
-        Version = $info.Version
-        Url32   = $info.Line
+        SoftwareVersion = $version
+        Version = $version
+        Url64   = $baseUrl + $urls[0]
+        Url32   = $baseUrl + $urls[1]
     }
 }
 
-update -ChecksumFor none
+update -ChecksumFor all
