@@ -31,8 +31,15 @@ function global:au_AfterUpdate {
 function global:au_GetLatest {
     $downloadPage = Invoke-WebRequest -Uri $releases -UseBasicParsing
 
+    # Pre 6.10.0 download pattern
     # https://github.com/Azure/azure-powershell/releases/download/v5.3.0-February2018-rtm/azure-powershell.5.3.0.msi
-    $rx = '^' + [regex]::Escape($releases) + '/download/[^/]+/azure-powershell\.(?<v>\d+\.\d+\.\d+)\.msi$'
+    # $rx = '^' + [regex]::Escape($releases) + '/download/[^/]+/azure-powershell\.(?<v>\d+\.\d+\.\d+)\.msi$'
+
+    # Post 6.9.0 download pattern (renamed 'Azure-Cmdlets'; added 4th-octet to version number and explicit architecture)
+    # https://github.com/Azure/azure-powershell/releases/download/v6.13.1-November2018/Azure-Cmdlets-6.13.1.24243-x64.msi
+    $rx = '^' + [regex]::Escape($releases) + '/download/[^/]+/azure-cmdlets\-(?<v>\d+\.\d+\.\d+\.\d+)-x64+\.msi$'
+
+
     $info = $downloadPage.Links | Select-Object -ExpandProperty href | Select-String -Pattern $rx | Select-Object -Property 'Line', @{ Name = 'Version'; Expression = { [version]$_.Matches[0].Groups['v'].Value } } | Sort-Object -Property 'Version' -Descending | Select-Object -First 1
 
     return @{
