@@ -1,49 +1,49 @@
-﻿$ErrorActionPreference = 'Stop'
-Set-StrictMode -Version 2
+﻿$ErrorActionPreference = 'Stop';
 
-$packageName = 'azurepowershell'
-$moduleVersion = [version]'6.10.0'
-$installVersion = [version]'6.10.0.23377'
-$url ='https://github.com/Azure/azure-powershell/releases/download/v6.10.0-October2018/Azure-Cmdlets-6.10.0.23377-x86.msi'
-$checksum = '1427b61411c491625311f8151fc0350db3c74af6088ef9e555e128fa105a9942'
-$checksumType = 'SHA256'
 
-. (Join-Path -Path (Split-Path -Path $MyInvocation.MyCommand.Path) -ChildPath helpers.ps1)
+$packageName= 'azurepowershell'
+$moduleVersion = [version]'6.10.0' # Define variable to detect if version is already installed
 
+$toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+
+$packageArgs = @{
+  packageName   = $packageName
+  unzipLocation = $toolsDir
+  fileType      = 'MSI'
+  url           = 'https://github.com/Azure/azure-powershell/releases/download/v6.10.0-October2018/Azure-Cmdlets-6.10.0.23377-x86.msi' # download url, HTTPS preferred
+  url64         = 'https://github.com/Azure/azure-powershell/releases/download/v6.10.0-October2018/Azure-Cmdlets-6.10.0.23377-x64.msi' # 64bit URL here (HTTPS preferred) or remove - if installer contains both (very rare), use $url
+
+  #softwareName  = 'NewMsiPackage*' #part or all of the Display Name as you see it in Programs and Features. It should be enough to be unique
+
+  checksum      = '1427b61411c491625311f8151fc0350db3c74af6088ef9e555e128fa105a9942'
+  checksumType  = 'sha256' #default is md5, can also be sha1, sha256 or sha512
+  checksum64    = '232ee32f9ced848ee04dbd511a8d2007a0230d41f0e69556ca5a63ade8943009'
+  checksumType64= 'sha256'
+
+  silentArgs    = "/qn /norestart /l*v `"$($env:TEMP)\$($packageName).$($env:chocolateyPackageVersion).MsiInstall.log`"" # ALLUSERS=1 DISABLEDESKTOPSHORTCUT=1 ADDDESKTOPICON=0 ADDSTARTMENU=0
+  validExitCodes= @(
+      0,    # success
+      3010, # success, reboot required
+      1641  # success, reboot initiated (overridden by /norestart flag above)
+    )
+}
+
+# Load functions from helpers.ps1 script
+. (Join-Path -Path $toolsDir -ChildPath helpers.ps1)
+
+# Check for PowerShell 5.0+
 Ensure-RequiredPowerShellVersionPresent -RequiredVersion '5.0'
 
+# Verify that AzurePowershell module version isn't already installed
 if (Test-AzurePowerShellInstalled -RequiredVersion $moduleVersion)
 {
     return
 }
 
-$scriptDirectory = $PSScriptRoot # safe to use because we test for PS 3.0+ earlier
-$originalMsiLocalPath = Join-Path -Path $scriptDirectory -ChildPath "Azure-Cmdlets-${installVersion}-x86.msi"
+#https://chocolatey.org/docs/helpers-install-chocolatey-package
+Install-ChocolateyPackage @packageArgs
 
-$downloadArguments = @{
-    packageName = $packageName
-    fileFullPath = $originalMsiLocalPath
-    url = $url
-    checksum = $checksum
-    checksumType = $checksumType
-}
+#Write-Warning 'You may need to close and reopen PowerShell before the Azure PowerShell modules become available.'
 
-Set-StrictMode -Off # unfortunately, builtin helpers are not guaranteed to be strict mode compliant
-Get-ChocolateyWebFile @downloadArguments | Out-Null
-Set-StrictMode -Version 2
 
-$instArguments = @{
-    packageName = $packageName
-    installerType = 'msi'
-    file = $originalMsiLocalPath
-    silentArgs = '/Quiet /NoRestart /Log "{0}\{1}_{2:yyyyMMddHHmmss}.log"' -f $Env:TEMP, $packageName, (Get-Date)
-    validExitCodes = @(
-        0, # success
-        3010 # success, restart required
-    )
-}
 
-Set-StrictMode -Off
-Install-ChocolateyInstallPackage @instArguments
-
-Write-Warning 'You may need to close and reopen PowerShell before the Azure PowerShell modules become available.'
