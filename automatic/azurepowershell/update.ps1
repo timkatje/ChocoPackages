@@ -7,15 +7,21 @@ $releases = 'https://github.com/Azure/azure-powershell/releases?after=AzureRM.Ne
 function global:au_SearchReplace {
     @{
         '.\azurepowershell.nuspec' = @{
+            # Update version numbers referenced in the <ReleaseNotes> section
             '(^[\d\.]+\d)(\:)'                                  = "$($Latest.Version)`$2"
             '(software\s+version\s+)([\d\.]+\d)'                = "`${1}$($Latest.SoftwareVersion)"
         }
+        
         '.\tools\ChocolateyInstall.ps1' = @{
+            # Update the $ModuleVersion variable with the latest version number
             '(^\s*\$moduleVersion\s*=\s*\[version\])(''.*'')'   = "`$1'$($Latest.SoftwareVersion)'"
+
+            # Update the x86 file specifications
             '(^\s*\$url\s*=\s*)(''.*'')'                        = "`$1'$($Latest.Url32)'"
             '(^\s*\$checksum\s*=\s*)(''.*'')'                   = "`$1'$($Latest.Checksum32)'"
             '(^\s*\$checksumType\s*=\s*)(''.*'')'               = "`$1'$($Latest.ChecksumType32)'"
 
+            # Update the x64 file specifications
             '(^\s*url64\s*=\s*)(''.*'')'                        = "`$1'$($Latest.Url64)'"
             "(?i)(^\s*checksum64\s*=\s*)('.*')"                 = "`$1'$($Latest.Checksum64)'"
             "(?i)(^\s*checksumType64\s*=\s*)('.*')"             = "`$1'$($Latest.ChecksumType64)'"
