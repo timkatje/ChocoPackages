@@ -2,9 +2,10 @@
 Set-StrictMode -Version 2
 
 $packageName = 'azurepowershell'
-$moduleVersion = [version]'6.1.0'
-$url = 'https://github.com/Azure/azure-powershell/releases/download/v6.1.0-May2018/azure-powershell.6.1.0.msi'
-$checksum = '28bcb88d79897593cea79be964d419c14be98ddd6984e272d040ee4cc5c2c63e'
+$moduleVersion = [version]'6.10.0'
+$installVersion = [version]'6.10.0.23377'
+$url ='https://github.com/Azure/azure-powershell/releases/download/v6.10.0-October2018/Azure-Cmdlets-6.10.0.23377-x86.msi'
+$checksum = '1427b61411c491625311f8151fc0350db3c74af6088ef9e555e128fa105a9942'
 $checksumType = 'SHA256'
 
 . (Join-Path -Path (Split-Path -Path $MyInvocation.MyCommand.Path) -ChildPath helpers.ps1)
@@ -17,7 +18,7 @@ if (Test-AzurePowerShellInstalled -RequiredVersion $moduleVersion)
 }
 
 $scriptDirectory = $PSScriptRoot # safe to use because we test for PS 3.0+ earlier
-$originalMsiLocalPath = Join-Path -Path $scriptDirectory -ChildPath "azure-powershell.${moduleVersion}.msi"
+$originalMsiLocalPath = Join-Path -Path $scriptDirectory -ChildPath "Azure-Cmdlets-${installVersion}-x86.msi"
 
 $downloadArguments = @{
     packageName = $packageName
